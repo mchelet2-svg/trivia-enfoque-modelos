@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trivia: El Enfoque Basado en Modelos</title>
+<style>
+  :root {
+    --navy: #1B2A4A;
+    --teal: #0E8388;
+    --blue: #2E5EAA;
+    --soft: #E9EDF2;
+    --gray: #3A3A3A;
+    --good: #1B8A5A;
+    --bad: #C0392B;
+    --gold: #D4AF37;
+    --silver: #A8A8A8;
+    --bronze: #B07040;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    background: linear-gradient(160deg, var(--navy) 0%, #101c33 100%);
+    color: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #fff;
+    width: 100%;
+    max-width: 760px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .header {
+    background: var(--navy);
+    color: #fff;
+    padding: 22px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header h1 { margin: 0; font-size: 1.1rem; letter-spacing: 0.5px; }
+  .header .sub { font-size: 0.72rem; color: #9FB2CC; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .score-pill {
+    background: var(--teal);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .board-btn {
+    background: transparent;
+    border: 1.5px solid #6C82A8;
+    color: #C9D6E8;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .board-btn:hover { border-color: #fff; color: #fff; }
+  .progress-track { height: 6px; background: var(--soft); }
+  .progress-fill { height: 100%; background: var(--teal); width: 0%; transition: width 0.4s ease; }
+  .body { padding: 28px; }
+
+  /* Name entry */
+  .name-screen { padding: 50px 28px; text-align: center; }
+  .name-screen h2 { color: var(--navy); font-size: 1.5rem; margin-bottom: 6px; }
+  .name-screen p { color: var(--gray); margin-bottom: 22px; }
+  .name-input {
+    width: 100%;
+    max-width: 360px;
+    padding: 14px 18px;
+    border: 2px solid var(--soft);
+    border-radius: 12px;
+    font-size: 1.05rem;
+    text-align: center;
+    margin-bottom: 18px;
+    outline: none;
+  }
+  .name-input:focus { border-color: var(--teal); }
+  .start-btn {
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    padding: 14px 34px;
+    border-radius: 999px;
+    font-size: 1.05rem;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .start-btn:disabled { background: #B7C3D1; cursor: not-allowed; }
+  .players-count {
+    margin-top: 22px;
+    color: var(--teal);
+    font-size: 0.85rem;
+    font-weight: bold;
+  }
+
+  .timer-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .timer-bar { flex: 1; height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+  .timer-fill { height: 100%; background: var(--blue); width: 100%; transition: width 1s linear; }
+  .timer-num { font-weight: bold; color: var(--blue); font-size: 0.9rem; min-width: 28px; text-align: right; }
+  .q-count { color: var(--teal); font-weight: bold; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .question { font-size: 1.2rem; font-weight: bold; color: var(--navy); margin-bottom: 22px; line-height: 1.4; }
+  .options { display: grid; gap: 12px; }
+  .opt {
+    background: var(--soft); border: 2px solid transparent; border-radius: 12px;
+    padding: 14px 18px; text-align: left; font-size: 1rem; color: var(--gray); cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .opt:hover { border-color: var(--blue); }
+  .opt.correct { background: #E4F5EC; border-color: var(--good); color: var(--good); font-weight: bold; }
+  .opt.wrong { background: #FBE7E4; border-color: var(--bad); color: var(--bad); font-weight: bold; }
+  .opt:disabled { cursor: default; }
+  .feedback { margin-top: 16px; font-size: 0.95rem; color: var(--gray); min-height: 24px; }
+  .next-btn {
+    margin-top: 20px; background: var(--navy); color: #fff; border: none; padding: 12px 26px;
+    border-radius: 999px; font-size: 0.95rem; font-weight: bold; cursor: pointer; display: none;
+  }
+  .next-btn.show { display: inline-block; }
+
+  .end-screen { padding: 45px 28px; text-align: center; }
+  .end-screen h2 { color: var(--navy); font-size: 1.5rem; margin-bottom: 8px; }
+  .end-screen p { color: var(--gray); font-size: 0.95rem; margin-bottom: 20px; }
+  .end-emoji { font-size: 3.2rem; margin-bottom: 8px; }
+  .end-score { font-size: 2.2rem; font-weight: bold; color: var(--teal); margin: 8px 0; }
+  .end-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  .restart-btn { background: var(--blue); color: #fff; border: none; padding: 12px 26px; border-radius: 999px; font-weight: bold; cursor: pointer; }
+  .board-btn-main { background: var(--navy); color: #fff; border: none; padding: 12px 26px; border-radius: 999px; font-weight: bold; cursor: pointer; }
+  .leader-notice {
+    margin: 18px auto 6px; max-width: 460px; padding: 14px 18px; border-radius: 14px;
+    background: linear-gradient(90deg, #FFF6DD, #FCEBB0); border: 2px solid var(--gold);
+    font-weight: bold; color: var(--navy); font-size: 0.95rem;
+  }
+
+  /* Leaderboard */
+  .board-screen { padding: 34px 28px; }
+  .board-screen h2 { color: var(--navy); text-align: center; margin-bottom: 4px; }
+  .board-screen .sub2 { text-align: center; color: var(--gray); font-size: 0.85rem; margin-bottom: 24px; }
+  .board-list { display: grid; gap: 10px; max-height: 420px; overflow-y: auto; }
+  .board-row {
+    display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+    background: var(--soft); border-radius: 12px;
+  }
+  .board-row.gold { background: linear-gradient(90deg, #FFF6DD, #FCEBB0); border: 2px solid var(--gold); }
+  .board-row.silver { background: linear-gradient(90deg, #F3F3F3, #E3E3E3); border: 2px solid var(--silver); }
+  .board-row.bronze { background: linear-gradient(90deg, #FBE9DC, #F0CBAD); border: 2px solid var(--bronze); }
+  .rank { font-weight: bold; font-size: 1.1rem; color: var(--navy); width: 34px; text-align: center; }
+  .pname { flex: 1; font-weight: bold; color: var(--navy); font-size: 1rem; }
+  .pscore { font-weight: bold; color: var(--teal); font-size: 1rem; }
+  .empty-board { text-align: center; color: var(--gray); padding: 30px 0; }
+  .close-board {
+    display: block; margin: 24px auto 0; background: var(--teal); color: #fff; border: none;
+    padding: 12px 30px; border-radius: 999px; font-weight: bold; cursor: pointer;
+  }
+  .winner-banner {
+    text-align: center; margin-bottom: 20px; padding: 16px; border-radius: 14px;
+    background: linear-gradient(90deg, #FFF6DD, #FCEBB0); border: 2px solid var(--gold);
+  }
+  .winner-banner .crown { font-size: 2rem; }
+  .winner-banner .wname { font-size: 1.3rem; font-weight: bold; color: var(--navy); }
+  .winner-banner .wscore { color: var(--teal); font-weight: bold; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div>
+      <h1>🎮 Trivia: Enfoque Basado en Modelos</h1>
+      <div class="sub">IHC · Grupo 7 · Semana 3</div>
+    </div>
+    <div class="header-actions">
+      <button class="board-btn" onclick="showBoard()">🏆 Tabla de posiciones</button>
+      <div class="score-pill" id="scorePill">⭐ 0 pts</div>
+    </div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="name-screen" id="nameScreen">
+    <h2>¡Bienvenido/a a la trivia! 🚀</h2>
+    <p>Escribe tu nombre para empezar a jugar.<br>6 preguntas · Responde rápido para ganar más puntos.</p>
+    <input type="text" id="playerName" class="name-input" placeholder="Tu nombre" maxlength="24" onkeyup="checkName(); if(event.key==='Enter') startGame();">
+    <br>
+    <button class="start-btn" id="startBtn" onclick="startGame()" disabled>Empezar juego</button>
+    <div class="players-count" id="playersCount">Aún nadie ha jugado</div>
+  </div>
+
+  <div class="body hidden" id="quizScreen">
+    <div class="timer-wrap">
+      <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+      <div class="timer-num" id="timerNum">15</div>
+    </div>
+    <div class="q-count" id="qCount">Pregunta 1 de 6</div>
+    <div class="question" id="questionText"></div>
+    <div class="options" id="optionsBox"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Siguiente →</button>
+  </div>
+
+  <div class="end-screen hidden" id="endScreen">
+    <div class="end-emoji" id="endEmoji">🏆</div>
+    <h2 id="endTitle">¡Juego terminado!</h2>
+    <div class="end-score" id="endScore">0 pts</div>
+    <p id="endMsg"></p>
+    <div id="leaderNotice"></div>
+    <div class="end-actions">
+      <button class="restart-btn" onclick="goToNamePrompt()">Siguiente jugador</button>
+      <button class="board-btn-main" onclick="showBoard()">Ver tabla de posiciones</button>
+    </div>
+  </div>
+
+  <div class="board-screen hidden" id="boardScreen">
+    <h2>🏆 Tabla de posiciones</h2>
+    <div class="sub2" id="boardSub">Jugadores registrados en esta sesión</div>
+    <div id="winnerBanner"></div>
+    <div class="board-list" id="boardList"></div>
+    <button class="close-board" onclick="closeBoard()">Cerrar tabla</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    q: "¿Qué significan las siglas MB-UID?",
+    options: [
+      "Model-Based User Interface Design",
+      "Multi-Browser User Interaction Design",
+      "Modular Business User Information Data",
+      "Mobile-Based Universal Interface Development"
+    ],
+    correct: 0
+  },
+  {
+    q: "¿Cuáles son los 5 modelos que componen el enfoque basado en modelos?",
+    options: [
+      "Modelo de red, servidor, cliente, API y base de datos",
+      "Modelo de usuario, tareas, dominio, presentación y diálogo",
+      "Modelo físico, lógico, conceptual, visual y funcional",
+      "Modelo de color, tipografía, layout, ícono y botón"
+    ],
+    correct: 1
+  },
+  {
+    q: "¿Qué herramienta permite generar interfaces automáticamente a partir de los modelos?",
+    options: [
+      "CMS (Content Management System)",
+      "IDE (Integrated Development Environment)",
+      "UIMS (User Interface Management System)",
+      "CRM (Customer Relationship Management)"
+    ],
+    correct: 2
+  },
+  {
+    q: "¿Cuál de estos NO es un principio del enfoque basado en modelos?",
+    options: [
+      "Trazabilidad",
+      "Validación temprana",
+      "Consistencia",
+      "Programación orientada a objetos"
+    ],
+    correct: 3
+  },
+  {
+    q: "En el ejemplo de la app bancaria, ¿cuál es el primer paso modelado de la tarea 'transferir dinero'?",
+    options: [
+      "Confirmar la operación",
+      "Seleccionar la cuenta de origen",
+      "Cerrar sesión",
+      "Descargar el comprobante"
+    ],
+    correct: 1
+  },
+  {
+    q: "¿Qué lenguaje basado en XML describe interfaces de forma independiente de la plataforma?",
+    options: [
+      "HTML5",
+      "UsiXML",
+      "JSON-UI",
+      "XAML Bridge"
+    ],
+    correct: 1
+  }
+];
+
+let current = 0;
+let score = 0;
+let timeLeft = 15;
+let timerInterval = null;
+let answered = false;
+let currentPlayer = "";
+let leaderboard = []; // { name, score, date }
+
+const nameScreen = document.getElementById('nameScreen');
+const quizScreen = document.getElementById('quizScreen');
+const endScreen = document.getElementById('endScreen');
+const boardScreen = document.getElementById('boardScreen');
+const questionText = document.getElementById('questionText');
+const optionsBox = document.getElementById('optionsBox');
+const feedback = document.getElementById('feedback');
+const nextBtn = document.getElementById('nextBtn');
+const qCount = document.getElementById('qCount');
+const scorePill = document.getElementById('scorePill');
+const progressFill = document.getElementById('progressFill');
+const timerFill = document.getElementById('timerFill');
+const timerNum = document.getElementById('timerNum');
+const playerNameInput = document.getElementById('playerName');
+const startBtn = document.getElementById('startBtn');
+const playersCount = document.getElementById('playersCount');
+
+function checkName() {
+  startBtn.disabled = playerNameInput.value.trim().length === 0;
+}
+
+function updatePlayersCount() {
+  const n = leaderboard.length;
+  playersCount.textContent = n === 0
+    ? "Aún nadie ha jugado"
+    : `${n} ${n === 1 ? 'jugador ha' : 'jugadores han'} jugado en esta sesión`;
+}
+
+function goToNamePrompt() {
+  endScreen.classList.add('hidden');
+  boardScreen.classList.add('hidden');
+  quizScreen.classList.add('hidden');
+  nameScreen.classList.remove('hidden');
+  progressFill.style.width = '0%';
+  playerNameInput.value = '';
+  startBtn.disabled = true;
+  updatePlayersCount();
+  scorePill.textContent = '⭐ 0 pts';
+  playerNameInput.focus();
+}
+
+function startGame() {
+  if (playerNameInput.value.trim().length === 0) return;
+  currentPlayer = playerNameInput.value.trim();
+  current = 0;
+  score = 0;
+  nameScreen.classList.add('hidden');
+  boardScreen.classList.add('hidden');
+  quizScreen.classList.remove('hidden');
+  endScreen.classList.add('hidden');
+  scorePill.textContent = `⭐ 0 pts · ${currentPlayer}`;
+  loadQuestion();
+}
+
+function loadQuestion() {
+  answered = false;
+  feedback.textContent = '';
+  nextBtn.classList.remove('show');
+  const item = questions[current];
+  qCount.textContent = `Pregunta ${current + 1} de ${questions.length}`;
+  progressFill.style.width = `${(current / questions.length) * 100}%`;
+  questionText.textContent = item.q;
+  optionsBox.innerHTML = '';
+  item.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.textContent = opt;
+    btn.onclick = () => selectAnswer(i);
+    optionsBox.appendChild(btn);
+  });
+  startTimer();
+}
+
+function startTimer() {
+  timeLeft = 15;
+  timerNum.textContent = timeLeft;
+  timerFill.style.width = '100%';
+  timerFill.style.background = 'var(--blue)';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerNum.textContent = timeLeft;
+    timerFill.style.width = `${(timeLeft / 15) * 100}%`;
+    if (timeLeft <= 5) timerFill.style.background = 'var(--bad)';
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) selectAnswer(-1);
+    }
+  }, 1000);
+}
+
+function selectAnswer(i) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInterval);
+  const item = questions[current];
+  const opts = optionsBox.querySelectorAll('.opt');
+  opts.forEach((btn, idx) => {
+    btn.disabled = true;
+    if (idx === item.correct) btn.classList.add('correct');
+    else if (idx === i) btn.classList.add('wrong');
+  });
+
+  if (i === item.correct) {
+    const bonus = Math.max(10, timeLeft * 6);
+    score += bonus;
+    feedback.innerHTML = `✅ <strong>¡Correcto!</strong> +${bonus} puntos`;
+  } else if (i === -1) {
+    feedback.innerHTML = `⏱️ <strong>Se acabó el tiempo.</strong> La respuesta correcta era: "${item.options[item.correct]}"`;
+  } else {
+    feedback.innerHTML = `❌ <strong>Incorrecto.</strong> La respuesta correcta era: "${item.options[item.correct]}"`;
+  }
+  scorePill.textContent = `⭐ ${score} pts · ${currentPlayer}`;
+  nextBtn.classList.add('show');
+  nextBtn.textContent = current === questions.length - 1 ? 'Ver resultado →' : 'Siguiente →';
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    endGame();
+  } else {
+    loadQuestion();
+  }
+}
+
+function endGame() {
+  quizScreen.classList.add('hidden');
+  endScreen.classList.remove('hidden');
+  progressFill.style.width = '100%';
+  document.getElementById('endScore').textContent = `${score} pts`;
+
+  leaderboard.push({ name: currentPlayer, score: score, time: new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }) });
+
+  const max = questions.length;
+  const pct = score / (max * 90);
+  let emoji, title, msg;
+  if (pct >= 0.8) {
+    emoji = '🏆'; title = `¡Excelente, ${currentPlayer}!`;
+    msg = 'Dominas el enfoque basado en modelos como un verdadero experto.';
+  } else if (pct >= 0.5) {
+    emoji = '👏'; title = `¡Buen trabajo, ${currentPlayer}!`;
+    msg = 'Tienes una buena base sobre el enfoque basado en modelos.';
+  } else {
+    emoji = '📚'; title = `¡Gracias por jugar, ${currentPlayer}!`;
+    msg = 'Vale la pena repasar los 5 modelos y sus principios.';
+  }
+  document.getElementById('endEmoji').textContent = emoji;
+  document.getElementById('endTitle').textContent = title;
+  document.getElementById('endMsg').textContent = msg;
+
+  const leaderNotice = document.getElementById('leaderNotice');
+  const sorted = [...leaderboard].sort((a, b) => b.score - a.score);
+  const isLeader = sorted.length > 0 && sorted[0].name === currentPlayer && sorted[0].score === score &&
+    sorted.findIndex(p => p.score === score && p.name === currentPlayer) === 0;
+
+  if (isLeader && score > 0) {
+    leaderNotice.innerHTML = `
+      <div class="leader-notice">
+        👑 ¡Felicidades! Por ahora vas <strong>en primer lugar</strong> de toda la clase.<br>
+        Si nadie te supera, te llevas el 🏅 diploma de campeón/a.
+      </div>`;
+    launchConfetti();
+  } else {
+    leaderNotice.innerHTML = '';
+  }
+}
+
+function launchConfetti() {
+  const colors = ['#D4AF37', '#0E8388', '#2E5EAA', '#1B2A4A'];
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement('div');
+    piece.style.position = 'fixed';
+    piece.style.width = '8px';
+    piece.style.height = '8px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.top = '-10px';
+    piece.style.opacity = '0.9';
+    piece.style.borderRadius = '2px';
+    piece.style.zIndex = '9999';
+    piece.style.pointerEvents = 'none';
+    document.body.appendChild(piece);
+    const duration = 1800 + Math.random() * 1200;
+    const rotate = Math.random() * 360;
+    piece.animate([
+      { transform: `translateY(0) rotate(0deg)`, opacity: 0.9 },
+      { transform: `translateY(100vh) rotate(${rotate}deg)`, opacity: 0.2 }
+    ], { duration, easing: 'ease-in' });
+    setTimeout(() => piece.remove(), duration + 100);
+  }
+}
+
+function showBoard() {
+  nameScreen.classList.add('hidden');
+  quizScreen.classList.add('hidden');
+  endScreen.classList.add('hidden');
+  boardScreen.classList.remove('hidden');
+
+  const sorted = [...leaderboard].sort((a, b) => b.score - a.score);
+  const boardList = document.getElementById('boardList');
+  const winnerBanner = document.getElementById('winnerBanner');
+  const boardSub = document.getElementById('boardSub');
+
+  if (sorted.length === 0) {
+    boardList.innerHTML = '<div class="empty-board">Todavía nadie ha jugado. ¡Sé el primero!</div>';
+    winnerBanner.innerHTML = '';
+    boardSub.textContent = 'Jugadores registrados en esta sesión';
+  } else {
+    boardSub.textContent = `${sorted.length} ${sorted.length === 1 ? 'jugador registrado' : 'jugadores registrados'} en esta sesión`;
+    const top = sorted[0];
+    winnerBanner.innerHTML = `
+      <div class="winner-banner">
+        <div class="crown">👑</div>
+        <div class="wname">${escapeHtml(top.name)}</div>
+        <div class="wscore">Primer lugar · ${top.score} pts</div>
+      </div>`;
+    const medals = ['🥇', '🥈', '🥉'];
+    boardList.innerHTML = sorted.map((p, i) => {
+      const cls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const rankDisplay = i < 3 ? medals[i] : (i + 1);
+      return `
+        <div class="board-row ${cls}">
+          <div class="rank">${rankDisplay}</div>
+          <div class="pname">${escapeHtml(p.name)}</div>
+          <div class="pscore">${p.score} pts</div>
+        </div>`;
+    }).join('');
+  }
+}
+
+function closeBoard() {
+  boardScreen.classList.add('hidden');
+  goToNamePrompt();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+updatePlayersCount();
+</script>
+
+</body>
+</html>
